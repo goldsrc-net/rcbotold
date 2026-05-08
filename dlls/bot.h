@@ -54,6 +54,8 @@
 #ifndef __BOT_H__
 #define __BOT_H__
 
+#include <cstdint>
+
 #include "generic_class.h"
 #include "bot_const.h"
 #include "bot_menu.h"
@@ -724,7 +726,12 @@ public:
 		std::memset(this, 0, sizeof(CBotTask));
 	}
 
-	CBotTask(const eBotTask iTask, const int iScheduleId = 0, edict_t* pInfo = nullptr, const int iInfo = 0, const float fInfo = 0.0f,
+	// m_iInfo holds either a small int (impulse, count, etc.) or a native
+	// pointer (e.g. BOT_TASK_USE_TELEPORTER stuffs the source teleporter's
+	// edict_t* in here when m_pInfo is already taken by the destination).
+	// Widened to intptr_t so the pointer survives on 64-bit hosts; consumers
+	// that need a real int round-trip via static_cast<int>.
+	CBotTask(const eBotTask iTask, const int iScheduleId = 0, edict_t* pInfo = nullptr, const intptr_t iInfo = 0, const float fInfo = 0.0f,
 		const Vector& vInfo = Vector(0, 0, 0), const float fTimeToComplete = -1.0f) : m_vInfo(vInfo)/*, CBotTask *GoalTask = NULL */
 	{
 		// cheap way of adding schedules.. ;)
@@ -782,7 +789,7 @@ public:
 		return m_iScheduleDescription == iSchedDesc;
 	}
 
-	void SetInt(const int iNewInt)
+	void SetInt(const intptr_t iNewInt)
 	{
 		m_iInfo = iNewInt;
 	}
@@ -807,7 +814,7 @@ public:
 		return m_vInfo;
 	}
 
-	int TaskInt() const
+	intptr_t TaskInt() const
 	{
 		return m_iInfo;
 	}
@@ -1086,7 +1093,7 @@ private:
 	//////////////////////
 	// task variables
 	//
-	int			m_iInfo;
+	intptr_t	m_iInfo;
 	float		m_fInfo;
 	Vector		m_vInfo;
 	MyEHandle	m_pInfo;

@@ -109,7 +109,7 @@ void pfnSetModel(edict_t* e, const char* m)
 {
 	if (debug_engine) {
 		fp = std::fopen("bot.txt", "a");
-		std::fprintf(fp, "pfnSetModel: edict=%x %s\n", unsigned(e), m);
+		std::fprintf(fp, "pfnSetModel: edict=%p %s\n", static_cast<const void*>(e), m);
 		std::fclose(fp);
 	}
 
@@ -142,7 +142,7 @@ void pfnSetSize(edict_t* e, const float* rgflMin, const float* rgflMax)
 {
 	if (debug_engine) {
 		fp = std::fopen("bot.txt", "a");
-		std::fprintf(fp, "pfnSetSize: %x\n", unsigned(e));
+		std::fprintf(fp, "pfnSetSize: %p\n", static_cast<const void*>(e));
 		std::fclose(fp);
 	}
 #ifdef RCBOT_META_BUILD
@@ -320,7 +320,7 @@ void pfnRemoveEntity(edict_t* e)
 	if (debug_engine)
 	{
 		fp = std::fopen("bot.txt", "a");
-		std::fprintf(fp, "pfnRemoveEntity: %x\n", unsigned(e));
+		std::fprintf(fp, "pfnRemoveEntity: %p\n", static_cast<const void*>(e));
 		if (e->v.model != 0)
 			std::fprintf(fp, " model=%s\n", STRING(e->v.model));
 		std::fclose(fp);
@@ -1320,7 +1320,7 @@ void pfnSetClientMaxspeed(const edict_t* pEdict, const float fNewMaxspeed)
 
 	if (debug_engine) {
 		fp = std::fopen("bot.txt", "a");
-		std::fprintf(fp, "pfnSetClientMaxspeed: edict=%x %f\n", unsigned(pEdict), fNewMaxspeed);
+		std::fprintf(fp, "pfnSetClientMaxspeed: edict=%p %f\n", static_cast<const void*>(pEdict), fNewMaxspeed);
 		std::fclose(fp);
 	}
 #ifdef RCBOT_META_BUILD
@@ -1480,7 +1480,7 @@ int pfnGetPlayerUserId(edict_t* e)
 	{
 		if (debug_engine) {
 			fp = std::fopen("bot.txt", "a");
-			std::fprintf(fp, "pfnGetPlayerUserId: %x\n", unsigned(e));
+			std::fprintf(fp, "pfnGetPlayerUserId: %p\n", static_cast<const void*>(e));
 			std::fclose(fp);
 		}
 	}
@@ -1554,7 +1554,7 @@ unsigned pfnGetPlayerWONId(edict_t* e)
 
 	if (debug_engine) {
 		fp = std::fopen("bot.txt", "a");
-		std::fprintf(fp, "pfnGetPlayerWONId: %x\n", unsigned(e));
+		std::fprintf(fp, "pfnGetPlayerWONId: %p\n", static_cast<const void*>(e));
 		std::fclose(fp);
 	}
 #ifdef RCBOT_META_BUILD

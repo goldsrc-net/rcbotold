@@ -332,7 +332,7 @@ C_DLLEXPORT int Meta_Query(char* interfaceVersion, plugin_info_t** plinfo, mutil
 		std::sscanf(interfaceVersion, "%d:%d", &mmajor, &mminor);
 		std::sscanf(META_INTERFACE_VERSION, "%d:%d", &pmajor, &pminor);
 
-		if (pmajor > mmajor || pmajor == mmajor && pminor > mminor)
+		if (pmajor > mmajor || (pmajor == mmajor && pminor > mminor))
 		{
 			LOG_CONSOLE(PLID, "metamod version is too old for this plugin; update metamod");
 			LOG_ERROR(PLID, "metamod version is too old for this plugin; update metamod");

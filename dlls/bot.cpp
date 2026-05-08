@@ -2216,7 +2216,6 @@ bool BotFunc_FillString(char* string, const char* fill_point, const char* fill_w
 		std::memset(before, 0, len);
 		std::memset(after, 0, len);
 
-		//const int start = reinterpret_cast<int>(ptr) - reinterpret_cast<int>(string);
 		const ptrdiff_t start = ptr - string;
 		std::strncpy(before, string, start);
 
@@ -2224,7 +2223,7 @@ bool BotFunc_FillString(char* string, const char* fill_point, const char* fill_w
 		string[start] = 0;
 
 		// Use fill_point_length inside the loop
-		const size_t end = start + fill_point_length;
+		const size_t end = static_cast<size_t>(start) + fill_point_length;
 		std::strncpy(after, &string[end], len - end);
 		after[len - end] = 0;
 
@@ -6492,7 +6491,7 @@ bool CBot::UpdateVisibles()
 	{
 		const int iSched = m_Tasks.GetNewScheduleId();
 
-		AddPriorityTask(CBotTask(BOT_TASK_USE_TELEPORTER, iSched, pTeleporter->v.euser1, reinterpret_cast<int>(pTeleporter), 0,
+		AddPriorityTask(CBotTask(BOT_TASK_USE_TELEPORTER, iSched, pTeleporter->v.euser1, reinterpret_cast<intptr_t>(pTeleporter), 0,
 			pTeleporter->v.origin));
 		AddPriorityTask(CBotTask(BOT_TASK_FIND_PATH, iSched, pTeleporter));
 

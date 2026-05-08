@@ -148,9 +148,9 @@ void BotChatReply(CBot* pBot, char* szMsg, edict_t* pSender, char* szReplyMsg)
 		// does the bot feel concerned ? (more chances of replying if its name appears)
 		// if real mode is on, then bot chat is affected by bots rep with sender
 		// and depends on chat_reply_percent command
-		if (gBotGlobals.m_iBotChatReplyPercent && (RANDOM_LONG(0, 100) < gBotGlobals.m_iBotChatReplyPercent && (!
+		if (gBotGlobals.m_iBotChatReplyPercent && ((RANDOM_LONG(0, 100) < gBotGlobals.m_iBotChatReplyPercent && (!
 			gBotGlobals.IsConfigSettingOn(BOT_CONFIG_REAL_MODE) ||
-			RANDOM_LONG(BOT_MIN_REP, BOT_MAX_REP) < iRep) ||
+			RANDOM_LONG(BOT_MIN_REP, BOT_MAX_REP) < iRep)) ||
 			/*gBotGlobals.m_Clients*/
 			bNameInMsg || UTIL_GetNumClients(false) == 2))
 		{
@@ -1281,7 +1281,7 @@ HAL_DICTIONARY* BotHALMakeKeywords(CBot* pBot, const HAL_DICTIONARY* words)
 
 int strpos(char* pos, char* start)
 {
-	return int(pos) - int(start);
+	return static_cast<int>(pos - start);
 }
 
 void FillStringArea(char* string, const int maxstring, char* fill, int maxfill, const int start, const int end)

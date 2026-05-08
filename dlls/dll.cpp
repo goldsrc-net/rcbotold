@@ -673,7 +673,7 @@ void ClientKill(edict_t* pEntity)
 {
 	if (debug_engine) {
 		std::FILE* fp = std::fopen("bot.txt", "a");
-		std::fprintf(fp, "ClientKill: %x\n", unsigned(pEntity));
+		std::fprintf(fp, "ClientKill: %p\n", static_cast<const void*>(pEntity));
 		std::fclose(fp);
 	}
 
@@ -688,7 +688,7 @@ void ClientPutInServer(edict_t* pEntity)
 {
 	if (debug_engine) {
 		std::FILE* fp = std::fopen("bot.txt", "a");
-		std::fprintf(fp, "ClientPutInServer: %x\n", unsigned(pEntity));
+		std::fprintf(fp, "ClientPutInServer: %p\n", static_cast<const void*>(pEntity));
 		std::fclose(fp);
 	}
 
@@ -912,7 +912,7 @@ void ClientCommand(edict_t* pEntity)
 						if (pBot->IsUsed())
 						{
 							// say message, everyone can see, team message only team mates can see
-							if (bSayTeamMsg && UTIL_GetTeam(pEntity) == pBot->GetTeam() || bSayMsg)
+							if ((bSayTeamMsg && UTIL_GetTeam(pEntity) == pBot->GetTeam()) || bSayMsg)
 							{
 								pBot->ReplyToMessage(szMessage.get(), pEntity, iTeamOnly);
 							}
@@ -980,7 +980,7 @@ void ClientCommand(edict_t* pEntity)
 		}
 	}
 	else if (FStrEq(pcmd, BOT_COMMAND_ACCESS) &&
-		(!IS_DEDICATED_SERVER() && pEntity != gBotGlobals.m_pListenServerEdict ||
+		((!IS_DEDICATED_SERVER() && pEntity != gBotGlobals.m_pListenServerEdict) ||
 			IS_DEDICATED_SERVER()))
 	{
 		gBotGlobals.m_CurrentHandledCvar = gBotGlobals.m_BotCvars.GetCvar(arg1);
@@ -1057,7 +1057,7 @@ void ClientUserInfoChanged(edict_t* pEntity, char* infobuffer)
 {
 	if (debug_engine) {
 		std::FILE* fp = std::fopen("bot.txt", "a");
-		std::fprintf(fp, "ClientUserInfoChanged: pEntity=%x infobuffer=%s\n", unsigned(pEntity), infobuffer);
+		std::fprintf(fp, "ClientUserInfoChanged: pEntity=%p infobuffer=%s\n", static_cast<const void*>(pEntity), infobuffer);
 		std::fclose(fp);
 	}
 
@@ -1212,7 +1212,7 @@ void PlayerCustomization(edict_t* pEntity, customization_t* pCust)
 {
 	if (debug_engine) {
 		std::FILE* fp = std::fopen("bot.txt", "a");
-		std::fprintf(fp, "PlayerCustomization: %x\n", unsigned(pEntity));
+		std::fprintf(fp, "PlayerCustomization: %p\n", static_cast<const void*>(pEntity));
 		std::fclose(fp);
 	}
 
@@ -1396,7 +1396,7 @@ int InconsistentFile(const edict_t* player, const char* filename, char* disconne
 {
 	if (debug_engine) {
 		std::FILE* fp = std::fopen("bot.txt", "a");
-		std::fprintf(fp, "InconsistentFile: %x filename=%s\n", unsigned(player), filename);
+		std::fprintf(fp, "InconsistentFile: %p filename=%s\n", static_cast<const void*>(player), filename);
 		std::fclose(fp);
 	}
 
@@ -2020,7 +2020,7 @@ void ReadBotUsersConfig()
 				szSteamId[j++] = buffer[i++];
 			szSteamId[j] = 0;
 
-			if (*szName && *szPass && *szAccessLevel || *szSteamId && *szAccessLevel)
+			if ((*szName && *szPass && *szAccessLevel) || (*szSteamId && *szAccessLevel))
 			{
 				BotMessage(nullptr, 0, "Added: name=\"%s\", pass=%s, accesslev=%s, steamid=%s", szName, szPass, szAccessLevel, szSteamId);
 
