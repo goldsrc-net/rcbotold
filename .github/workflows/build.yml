@@ -4,7 +4,7 @@ on: ["push", "workflow_dispatch"]
 
 jobs:
   build_main:
-    name: Build for ${{ matrix.os_short }}
+    name: Build for ${{ matrix.os_short }}-${{ matrix.target_arch }}
     runs-on: ${{ matrix.os_version }}
 
     # skip build on '[ci skip]'
@@ -13,40 +13,70 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - ubuntu-22.04
-          - windows-x32
         include:
-          - os: ubuntu-22.04
-            os_short: linux
+          # Linux i386 (legacy 32-bit, default rcbot target)
+          - os_short: linux
             os_version: ubuntu-22.04
+            target_arch: i386
             package_ext: tar.gz
             dbg_ext: dbg
             cc: clang
             cxx: clang++
             vs_arch: unused
-            am_arch: x86
 
-          - os: windows-x32
-            os_short: win32
+          # Linux amd64 (64-bit, this branch)
+          - os_short: linux
+            os_version: ubuntu-22.04
+            target_arch: amd64
+            package_ext: tar.gz
+            dbg_ext: dbg
+            cc: gcc
+            cxx: g++
+            vs_arch: unused
+
+          # Linux aarch64 (64-bit ARM, this branch — cross-compiled)
+          - os_short: linux
+            os_version: ubuntu-22.04
+            target_arch: aarch64
+            package_ext: tar.gz
+            dbg_ext: dbg
+            cc: aarch64-linux-gnu-gcc-12
+            cxx: aarch64-linux-gnu-g++-12
+            vs_arch: unused
+
+          # Windows x86 (32-bit)
+          - os_short: win32
             os_version: windows-latest
+            target_arch: i386
             package_ext: zip
             dbg_ext: pdb
             cc: not-used
             cxx: not-used
             vs_arch: x32
-            am_arch: x86
 
+          # Windows x64 (64-bit)
+          - os_short: win64
+            os_version: windows-latest
+            target_arch: amd64
+            package_ext: zip
+            dbg_ext: pdb
+            cc: not-used
+            cxx: not-used
+            vs_arch: x64
 
     steps:
-    - name: Install (Linux)
-      if: runner.os == 'Linux'
+    - name: Install (Linux i386 / amd64)
+      if: runner.os == 'Linux' && matrix.target_arch != 'aarch64'
       run: |
         sudo dpkg --add-architecture i386
         sudo apt-get update
         sudo apt-get install -y clang g++-multilib
-        echo "CC=clang" >> $GITHUB_ENV
-        echo "CXX=clang++" >> $GITHUB_ENV
+
+    - name: Install (Linux aarch64 cross-toolchain)
+      if: runner.os == 'Linux' && matrix.target_arch == 'aarch64'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gcc-12-aarch64-linux-gnu g++-12-aarch64-linux-gnu
 
     - name: Add msbuild to PATH (Windows)
       if: runner.os == 'Windows'
@@ -60,7 +90,7 @@ jobs:
         for /f "usebackq delims=*" %%i in (`vswhere -latest -property installationPath`) do (
           call "%%i"\Common7\Tools\vsdevcmd.bat -arch=${{ matrix.vs_arch }} -host_arch=x64
         )
-        
+
         :: Loop over all environment variables and make them global.
         for /f "delims== tokens=1,2" %%a in ('set') do (
           echo>>"%GITHUB_ENV%" %%a=%%b
@@ -83,18 +113,45 @@ jobs:
         path: rcbot
         submodules: recursive
 
-    - name: Build Files
+    - name: Build (Linux)
+      if: runner.os == 'Linux'
       shell: bash
       working-directory: rcbot
       run: |
         mkdir post
         cd post
-        
-        export AM_ARCH=${{ matrix.am_arch }}
-
-        python3 ../configure.py --symbol-files --enable-optimize
-        
+        export CC=${{ matrix.cc }}
+        export CXX=${{ matrix.cxx }}
+        python3 ../configure.py --target-arch=${{ matrix.target_arch }} --enable-optimize
         ambuild
+
+    - name: Build (Windows)
+      if: runner.os == 'Windows'
+      shell: bash
+      working-directory: rcbot
+      run: |
+        mkdir post
+        cd post
+        python3 ../configure.py --target-arch=${{ matrix.target_arch }} --enable-optimize
+        ambuild
+
+    # Stage a drop-in install: the per-arch .so/.dll plus the vendored
+    # rcbot/ default-config tree (bot_users.ini, bot_chat.ini,
+    # bot_config.ini, bot_profiles.ini, botprofiles/, waypoints/, etc.).
+    # Drop this whole tree into a HL1 mod gamedir alongside liblist.gam
+    # and rcbot attaches with zero "rcbot is not installed properly"
+    # warnings.
+    - name: Stage drop-in install
+      shell: bash
+      working-directory: rcbot
+      run: |
+        mkdir -p staged/dlls
+        # Per-arch binary
+        find post -name 'rcbot_mm_*.so' -o -name 'rcbot_mm_*.dll' | head -1 | \
+            xargs -I{} cp {} staged/dlls/
+        # Vendored default configs + waypoints + bot profiles
+        cp -r rcbot staged/
+        ls -la staged/ staged/dlls/
 
     - uses: benjlevesque/short-sha@v3.0
       id: short-sha
@@ -102,13 +159,13 @@ jobs:
     - name: Upload Binary
       uses: actions/upload-artifact@v7
       with:
-        name: rcbot-${{ matrix.os_short }}-${{ steps.short-sha.outputs.sha }}
+        name: rcbot-${{ matrix.os_short }}-${{ matrix.target_arch }}-${{ steps.short-sha.outputs.sha }}
         path: |
-            rcbot/post/*
+            rcbot/staged/*
 
     - name: Upload Debug Symbols
       uses: actions/upload-artifact@v7
       with:
-        name: rcbot-dbgsym-${{ matrix.os_short }}-${{ steps.short-sha.outputs.sha }}
+        name: rcbot-dbgsym-${{ matrix.os_short }}-${{ matrix.target_arch }}-${{ steps.short-sha.outputs.sha }}
         path: |
             rcbot/post/**/*.${{ matrix.dbg_ext }}
