@@ -2,7 +2,17 @@
 # vim: set sts=4 ts=8 sw=4 tw=99 et ft=python:
 import os, sys
 
-builder.cxx = builder.DetectCxx(target_arch = 'x86')
+# Map our --target-arch flag to the value AMBuild's DetectCxx expects.
+target_arch = builder.options.target_arch
+detect_arch_map = {
+  'i386':    'x86',
+  'amd64':   'x86_64',
+  'aarch64': 'arm64',
+}
+if target_arch not in detect_arch_map:
+  raise Exception('Unsupported --target-arch: {0}'.format(target_arch))
+
+builder.cxx = builder.DetectCxx(target_arch = detect_arch_map[target_arch])
 
 # Include search paths
 include_paths = [
@@ -34,9 +44,8 @@ if builder.cxx.target.platform == 'linux':
     '-mtune=generic',
     '-pipe',
     '-fPIC',
-    '-msse',
-    '-msse2',
-    '-mfpmath=sse',
+    # SSE flags are x86-only; aarch64 has NEON via the ABI baseline. Moved
+    # to the per-arch block below.
     '-fno-strict-aliasing',
     '-fstack-protector-strong',
     '-fstack-clash-protection',
@@ -62,17 +71,38 @@ if builder.cxx.target.platform == 'linux':
     '-Wno-unknown-attributes',
     '-Wno-logical-op-parentheses',
     '-Wno-return-stack-address',
-    '-m32',
+    # GCC-specific: rcbotold uses memset(this, 0, ...) on non-trivial classes
+    # in many places. Pre-existing pattern; not a new concern for this branch.
+    '-Wno-class-memaccess',
+    # `if (cond) return; return false;` on a single line trips this on GCC.
+    '-Wno-misleading-indentation',
+    # rcbotold has many `a && b || c` expressions in conditional logic. Silence
+    # the GCC warning across the project rather than papering over each site.
+    '-Wno-parentheses',
+    # Nested /* */ inside multi-line block comments in bot.cpp.
+    '-Wno-comment',
   ]
+  # Per-arch compiler / linker flags. SSE flags are x86-only; aarch64 has
+  # NEON via the ABI baseline, no extra flags needed.
+  if target_arch == 'i386':
+    builder.cxx.cflags += ['-msse4.2', '-mfpmath=sse', '-m32']
+    builder.cxx.linkflags += ['-m32']
+  elif target_arch == 'amd64':
+    builder.cxx.cflags += ['-msse4.2', '-mfpmath=sse', '-m64']
+    builder.cxx.linkflags += ['-m64']
+  elif target_arch == 'aarch64':
+    # No -m32/-m64; aarch64 toolchain selected via CC/CXX env (e.g.
+    # aarch64-linux-gnu-gcc-12). Builds expect the toolchain to be on PATH.
+    pass
   # Linux compiler C++ flags
   builder.cxx.cxxflags += [
     '-Wno-invalid-offsetof',
     '-Wno-write-strings',
     '-std=c++17',
   ]
-  # Linux linker flags
+  # Linux linker flags. -m32/-m64 is per-arch above. The hardening flags
+  # below are upstream additions and apply to all arches.
   builder.cxx.linkflags += [
-    '-m32',
     '-ldl',
     '-lm',
     '-Wl,--gc-sections',
@@ -102,7 +132,8 @@ elif builder.cxx.target.platform == 'windows':
     '/EHsc',
     '/GS'
   ]
-  # Windows linker flags
+  # Windows linker flags. /MACHINE: must match the target arch; only
+  # i386 and amd64 are MSVC-supported here.
   builder.cxx.linkflags += [
     '/EXPORT:GiveFnptrsToDll=_GiveFnptrsToDll@8,@1',
     'kernel32.lib',
@@ -116,8 +147,14 @@ elif builder.cxx.target.platform == 'windows':
     'oleaut32.lib',
     'uuid.lib',
     '/SECTION:.data,RW',
-    '/MACHINE:X86',
+    # /MACHINE: is per-arch (X86 vs X64) — set in the if/elif below.
   ]
+  if target_arch == 'i386':
+    builder.cxx.linkflags += ['/MACHINE:X86']
+  elif target_arch == 'amd64':
+    builder.cxx.linkflags += ['/MACHINE:X64']
+  else:
+    raise Exception('Windows builds only support i386 / amd64')
 
 # Compiler options for optimization ( --enable-optimize )
 if builder.options.optimize:
@@ -162,7 +199,7 @@ if builder.cxx.target.platform == 'linux':
     ]
 
 
-library = builder.cxx.Library('rcbot_mm')
+library = builder.cxx.Library('rcbot_mm_' + target_arch)
 
 library.compiler.includes += include_paths
 

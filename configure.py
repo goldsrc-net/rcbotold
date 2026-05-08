@@ -22,6 +22,9 @@ builder.default_build_folder = make_objdir_name
                        # help='Half-Life 1 SDK source tree folder')
 # builder.options.add_argument('--mm-path', type=str, dest='mm_path', default=None,
                        # help='Metamod source tree folder')
+builder.options.add_argument('--target-arch', type=str, dest='target_arch', default='i386',
+                       choices=['i386', 'amd64', 'aarch64'],
+                       help='Target architecture: i386 (default), amd64, or aarch64')
 builder.options.add_argument('--enable-optimize', action='store_const', const='1', dest='optimize',
                        help='Enable optimization')
 builder.options.add_argument('--enable-debug', action='store_const', const='1', dest='debug',
