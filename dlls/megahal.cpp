@@ -2024,10 +2024,12 @@ bool PrepareHALBrainForPersonality(bot_profile_t* pBotProfile)
 	pBotProfile->m_HAL->swappable_keywords = HAL_InitializeSwap(swp_filename);
 
 	// check if the brain exists, try to open it
+	bool bBrainFileExists = false;
 	std::FILE* fp = std::fopen(brn_filename, "rb");
 	if (fp != nullptr)
 	{
-		char cookie[32];
+		bBrainFileExists = true;
+		char cookie[sizeof"RCBOTHAL"] = {0};
 
 		std::fseek(fp, 0, SEEK_SET); // seek at start of file
 		std::fread(cookie, sizeof"RCBOTHAL", 1, fp); // read the brain signature
@@ -2038,9 +2040,9 @@ bool PrepareHALBrainForPersonality(bot_profile_t* pBotProfile)
 			return false; // ok, brain is valid
 	}
 
-	// there is a problem with the brain, infer a brand new one
-	BotMessage(nullptr, 0, "bot profile (%d) HAL brain damaged!", pBotProfile->m_iProfileId);
-	BotMessage(nullptr, 0, "inferring a new HAL brain to profile (%d)", pBotProfile->m_iProfileId);
+	if (bBrainFileExists)
+		BotMessage(nullptr, 0, "bot profile (%d) HAL brain damaged!", pBotProfile->m_iProfileId);
+	BotMessage(nullptr, 0, "inferring a new HAL brain for profile (%d)", pBotProfile->m_iProfileId);
 
 	// create the new brain (i.e, save a void one in the brain file)
 	fp = std::fopen(brn_filename, "wb");
