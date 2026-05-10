@@ -49,7 +49,7 @@ if builder.cxx.target.platform == 'linux':
     '-fno-strict-aliasing',
     '-fstack-protector-strong',
     '-fstack-clash-protection',
-    '-fcf-protection',
+    # -fcf-protection is x86-only (Intel CET); added per-arch below.
     '-Wall',
     #'-Werror',
     '-Wextra',
@@ -85,14 +85,17 @@ if builder.cxx.target.platform == 'linux':
   # Per-arch compiler / linker flags. SSE flags are x86-only; aarch64 has
   # NEON via the ABI baseline, no extra flags needed.
   if target_arch == 'i386':
-    builder.cxx.cflags += ['-msse4.2', '-mfpmath=sse', '-m32']
+    builder.cxx.cflags += ['-msse4.2', '-mfpmath=sse', '-m32', '-fcf-protection']
     builder.cxx.linkflags += ['-m32']
   elif target_arch == 'amd64':
-    builder.cxx.cflags += ['-msse4.2', '-mfpmath=sse', '-m64']
+    builder.cxx.cflags += ['-msse4.2', '-mfpmath=sse', '-m64', '-fcf-protection']
     builder.cxx.linkflags += ['-m64']
   elif target_arch == 'aarch64':
     # No -m32/-m64; aarch64 toolchain selected via CC/CXX env (e.g.
     # aarch64-linux-gnu-gcc-12). Builds expect the toolchain to be on PATH.
+    # -fcf-protection is Intel CET, x86-only; aarch64 has BTI/PAC via
+    # different flags (-mbranch-protection=) which we leave at the
+    # toolchain default for now.
     pass
   # Linux compiler C++ flags
   builder.cxx.cxxflags += [
