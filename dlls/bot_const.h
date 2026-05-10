@@ -145,7 +145,7 @@ constexpr int NS_PLAYER_POINTS_OFFSET = NS_PLAYER_EXPERIENCE_OFFSET + 2;
 #endif
 
 //#define NS_GET_PLAYER_POINTS(player) (int)((char*)(player)+NS_PLAYER_POINTS_OFFSET)
-#define NS_GET_PLAYER_POINTS(player) *(int*)(((int)(player)->pvPrivateData)+NS_PLAYER_POINTS_OFFSET)
+#define NS_GET_PLAYER_POINTS(player) *(int*)(((uintptr_t)(player)->pvPrivateData)+NS_PLAYER_POINTS_OFFSET)
 
 /////////////
 // SVENCOOP MONSTERS
