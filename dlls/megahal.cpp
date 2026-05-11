@@ -703,11 +703,15 @@ HAL_DICTIONARY* HAL_NewDictionary()
 void HAL_SaveDictionary(std::FILE* file, const HAL_DICTIONARY* dictionary)
 {
 	// this function saves a dictionary to the specified file
+	// The on-disk header is fixed at 4 bytes (uint32_t) so files stay
+	// portable between i386 and 64-bit builds; sizeof(unsigned long)
+	// would be 4 on ILP32 and 8 on LP64, breaking cross-arch reads.
 
-	std::fwrite(&dictionary->size, sizeof(unsigned long), 1, file);
+	const uint32_t size_on_disk = static_cast<uint32_t>(dictionary->size);
+	std::fwrite(&size_on_disk, sizeof(size_on_disk), 1, file);
 
 	// save each word to the file
-	for (int i = 0; i < static_cast<int>(dictionary->size); ++i)
+	for (uint32_t i = 0; i < size_on_disk; ++i)
 	{
 		std::fwrite(&dictionary->entry[i].length, sizeof(unsigned char), 1, file);
 		for (int j = 0; j < dictionary->entry[i].length; ++j)
@@ -718,17 +722,18 @@ void HAL_SaveDictionary(std::FILE* file, const HAL_DICTIONARY* dictionary)
 void HAL_LoadDictionary(std::FILE* file, HAL_DICTIONARY* dictionary)
 {
 	// this function loads a dictionary from the specified file
+	// Fixed 4-byte on-disk size — see HAL_SaveDictionary for rationale.
 
-	int size;
+	uint32_t size;
 	HAL_STRING word;
 
 	if (file == nullptr)
 		return;
 
-	std::fread(&size, sizeof(unsigned long), 1, file);
+	std::fread(&size, sizeof(size), 1, file);
 
 	// load each dictionary word from the file
-	for (int i = 0; i < size; ++i)
+	for (uint32_t i = 0; i < size; ++i)
 	{
 		std::fread(&word.length, sizeof(unsigned char), 1, file);
 
@@ -1008,11 +1013,15 @@ void HAL_Learn(const HAL_MODEL* model, const HAL_DICTIONARY* words)
 void HAL_SaveTree(std::FILE* file, const HAL_TREE* node)
 {
 	// this function saves a tree structure to the specified file
+	// `node->usage` is `unsigned long` (LP64: 8B, ILP32: 4B).  Pin the
+	// on-disk field to 4B (uint32_t) so existing i386 brain files stay
+	// readable on 64-bit builds (and vice versa).
 
 	if (node)
 	{
+		const uint32_t usage_on_disk = static_cast<uint32_t>(node->usage);
 		std::fwrite(&node->symbol, sizeof(unsigned short), 1, file);
-		std::fwrite(&node->usage, sizeof(unsigned long), 1, file);
+		std::fwrite(&usage_on_disk, sizeof(usage_on_disk), 1, file);
 		std::fwrite(&node->count, sizeof(unsigned short), 1, file);
 		std::fwrite(&node->branch, sizeof(unsigned short), 1, file);
 
@@ -1024,9 +1033,12 @@ void HAL_SaveTree(std::FILE* file, const HAL_TREE* node)
 void HAL_LoadTree(std::FILE* file, HAL_TREE* node)
 {
 	// this function loads a tree structure from the specified file
+	// Fixed 4-byte on-disk `usage` — see HAL_SaveTree for rationale.
 
+	uint32_t usage_on_disk;
 	std::fread(&node->symbol, sizeof(unsigned short), 1, file);
-	std::fread(&node->usage, sizeof(unsigned long), 1, file);
+	std::fread(&usage_on_disk, sizeof(usage_on_disk), 1, file);
+	node->usage = usage_on_disk;
 	std::fread(&node->count, sizeof(unsigned short), 1, file);
 	std::fread(&node->branch, sizeof(unsigned short), 1, file);
 
