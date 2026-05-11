@@ -135,10 +135,11 @@ elif builder.cxx.target.platform == 'windows':
     '/EHsc',
     '/GS'
   ]
-  # Windows linker flags. /MACHINE: must match the target arch; only
-  # i386 and amd64 are MSVC-supported here.
+  # Windows linker flags. /MACHINE: and /EXPORT:GiveFnptrsToDll are
+  # per-arch because the stdcall name decoration that the i386 export
+  # alias references (`_GiveFnptrsToDll@8`) is x86-only — x64 has no
+  # such decoration, so the same alias points at a nonexistent symbol.
   builder.cxx.linkflags += [
-    '/EXPORT:GiveFnptrsToDll=_GiveFnptrsToDll@8,@1',
     'kernel32.lib',
     'user32.lib',
     'gdi32.lib',
@@ -150,12 +151,17 @@ elif builder.cxx.target.platform == 'windows':
     'oleaut32.lib',
     'uuid.lib',
     '/SECTION:.data,RW',
-    # /MACHINE: is per-arch (X86 vs X64) — set in the if/elif below.
   ]
   if target_arch == 'i386':
-    builder.cxx.linkflags += ['/MACHINE:X86']
+    builder.cxx.linkflags += [
+      '/MACHINE:X86',
+      '/EXPORT:GiveFnptrsToDll=_GiveFnptrsToDll@8,@1',
+    ]
   elif target_arch == 'amd64':
-    builder.cxx.linkflags += ['/MACHINE:X64']
+    builder.cxx.linkflags += [
+      '/MACHINE:X64',
+      '/EXPORT:GiveFnptrsToDll,@1',
+    ]
   else:
     raise Exception('Windows builds only support i386 / amd64')
 
